@@ -1,0 +1,20 @@
+{
+  "name": "mocha-list-tests",
+  "version": "1.0.0",
+  "description": "List mocha suites and tests without running anything",
+  "main": "mocha-list-tests.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mocha",
+    "expect",
+    "chai",
+    "should",
+    "unit",
+    "integration",
+    "tests"
+  ],
+  "author": "Pau Sanchez",
+  "license": "MIT"
+}
