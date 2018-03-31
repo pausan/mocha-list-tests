@@ -170,7 +170,7 @@ function findSuitesAndTests (testFolder, extensions) {
     if (path.isAbsolute (file))
       require (file);
     else
-      require ('./' + file);
+      require ('./' + path.relative (__dirname, file));
   }
 
   return {
