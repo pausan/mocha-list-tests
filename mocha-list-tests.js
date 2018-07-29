@@ -140,6 +140,16 @@ function captureItFunctions (testName, ignoreFunction) {
 }
 
 // -----------------------------------------------------------------------------
+// captureTimingFunctions
+//
+// Helper function to captures all of mocha's timing calls and ignores the
+// functionality
+// -----------------------------------------------------------------------------
+function captureTimingFunctions (timing, ignoreFunction) {
+  timing = null;
+}
+
+// -----------------------------------------------------------------------------
 // findSuitesAndTests
 //
 // Find all suites and tests in given folder
@@ -160,8 +170,12 @@ function findSuitesAndTests (testFolder, extensions) {
   let allTestFiles = lookupFiles (testFolder, extensions || ['js'], true);
 
   // HOOK: describe/it function hooks
-  global.describe = captureDescribeFunctions
-  global.it       = captureItFunctions
+  global.describe   = captureDescribeFunctions
+  global.it         = captureItFunctions
+  global.before     = captureTimingFunctions
+  global.beforeEach = captureTimingFunctions
+  global.after      = captureTimingFunctions
+  global.afterEach  = captureTimingFunctions
 
   // capture all suites and direct tests
   for (let i = 0; i < allTestFiles.length; i++) {
