@@ -150,7 +150,6 @@ function captureHookFunctions (name) {
   return function capture (ignoreFunction) {
     console.log (name, ignoreFunction);
     addTestRouteToTree (testRoute, ':' + name);
-    tests[ (testRoute.join ('.') + ':' + name).replace (/^\.|\.$/, '') ] = true;
   };
 }
 // -----------------------------------------------------------------------------
