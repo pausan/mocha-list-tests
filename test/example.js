@@ -16,3 +16,16 @@ describe('suite-2', async function() {
     });
   });
 });
+
+describe ('suite-3', async function () {
+  before( function(){ console.log("won't execute"); });
+  after( function(){ console.log("won't execute"); });
+
+  beforeEach( function(){ console.log("won't execute"); });
+  afterEach( function(){ console.log("won't execute"); });
+
+  it('test-3.1', async function() {
+    console.log ("won't execute");
+  });
+
+});

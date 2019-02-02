@@ -140,6 +140,20 @@ function captureItFunctions (testName, ignoreFunction) {
 }
 
 // -----------------------------------------------------------------------------
+// captureHookFunctions
+//
+// Helper function to captures all 'before' 'after' ,... calls and add them to
+// our internal list of tests. Since these function's first parameter is a
+// function itself, we have to specify the name beforehand
+// -----------------------------------------------------------------------------
+function captureHookFunctions (name) {
+  return function capture (ignoreFunction) {
+    console.log (name, ignoreFunction);
+    addTestRouteToTree (testRoute, ':' + name);
+    tests[ (testRoute.join ('.') + ':' + name).replace (/^\.|\.$/, '') ] = true;
+  };
+}
+// -----------------------------------------------------------------------------
 // findSuitesAndTests
 //
 // Find all suites and tests in given folder
@@ -162,6 +176,11 @@ function findSuitesAndTests (testFolder, extensions) {
   // HOOK: describe/it function hooks
   global.describe = captureDescribeFunctions
   global.it       = captureItFunctions
+
+  global.before     = captureHookFunctions('before')
+  global.after      = captureHookFunctions('after')
+  global.beforeEach = captureHookFunctions('beforeEach')
+  global.afterEach  = captureHookFunctions('afterEach')
 
   // capture all suites and direct tests
   for (let i = 0; i < allTestFiles.length; i++) {
