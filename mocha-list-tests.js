@@ -148,7 +148,6 @@ function captureItFunctions (testName, ignoreFunction) {
 // -----------------------------------------------------------------------------
 function captureHookFunctions (name) {
   return function capture (ignoreFunction) {
-    console.log (name, ignoreFunction);
     addTestRouteToTree (testRoute, ':' + name);
   };
 }
