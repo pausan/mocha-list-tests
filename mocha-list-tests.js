@@ -123,7 +123,7 @@ function captureDescribeFunctions (suiteName, suite) {
 
   testRoute.push (suiteName);
   suites[testRoute.join ('.')] = true;
-  suite();
+  suite.apply({timeout: () => {}, slow: () => {}});
   testRoute.pop ();
 }
 
