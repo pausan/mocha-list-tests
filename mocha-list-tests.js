@@ -89,6 +89,13 @@ let testRoute = [];
 // convenient sometimes.
 // -----------------------------------------------------------------------------
 function addTestRouteToTree (testRoute, name) {
+  const stackTrace = { name: 'Stacktrace' };
+  Error.captureStackTrace(stackTrace, addTestRouteToTree);
+  const frames = stackTrace.stack.split('\n');
+  const line = frames[2];
+  const matches = line.match(/^(?:.*\((.*):\d+\)|.* at (\/.*?):\d+)$/);
+  const filenameAndLine = matches[1] || matches[2];
+
   let newTestRoute = testRoute.slice(0); // clone
   newTestRoute.push (name);
 
@@ -98,9 +105,9 @@ function addTestRouteToTree (testRoute, name) {
 
     // hack to initialize to empty object or true for leafs and be prepared
     // to override a leaf with an object.
-    if (!(current in root) || (root[current] === true)) {
+    if (!(current in root) || typeof(root[current]) == 'string') {
       if ((i + 1) == newTestRoute.length)
-        root[current] = true;
+        root[current] = filenameAndLine;
       else
         root[current] = {};
     }
