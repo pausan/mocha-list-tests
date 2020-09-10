@@ -173,8 +173,12 @@ function findSuitesAndTests (testFolder, extensions) {
   let allTestFiles = lookupFiles (testFolder, extensions || ['js'], true);
 
   // HOOK: describe/it function hooks
-  global.describe = captureDescribeFunctions
-  global.it       = captureItFunctions
+  global.describe      = captureDescribeFunctions
+  global.describe.skip = global.describe
+  global.describe.only = global.describe
+  global.it            = captureItFunctions
+  global.it.skip       = global.it
+  global.it.only       = global.it
 
   global.before     = captureHookFunctions('before')
   global.after      = captureHookFunctions('after')
