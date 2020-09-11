@@ -81,7 +81,7 @@ let tests = {};
 let suites = {};
 let tree = {};
 let testRoute = [];
-
+const directoryPrefix = new RegExp(`^${process.cwd()}/`);
 // -----------------------------------------------------------------------------
 // addTestRouteToTree
 //
@@ -94,7 +94,7 @@ function addTestRouteToTree (testRoute, name) {
   const frames = stackTrace.stack.split('\n');
   const line = frames[2];
   const matches = line.match(/^(?:.*\((.*):\d+\)|.* at (\/.*?):\d+)$/);
-  const filenameAndLine = matches[1] || matches[2];
+  const filenameAndLine = (matches[1] || matches[2]).replace(directoryPrefix, '');
 
   let newTestRoute = testRoute.slice(0); // clone
   newTestRoute.push (name);
