@@ -130,7 +130,13 @@ function captureDescribeFunctions (suiteName, suite) {
 
   testRoute.push (suiteName);
   suites[testRoute.join ('.')] = true;
-  suite.apply({timeout: () => {}, slow: () => {}});
+
+  // define methods that can be used inside describe using this
+  suite.apply({
+    timeout : () => {},
+    slow : () => {},
+    retries: () => {}
+  });
   testRoute.pop ();
 }
 
@@ -180,9 +186,10 @@ function findSuitesAndTests (testFolder, extensions) {
 
   // HOOK: describe/it function hooks
   global.describe      = captureDescribeFunctions
+  global.it            = captureItFunctions
+
   global.describe.skip = global.describe
   global.describe.only = global.describe
-  global.it            = captureItFunctions
   global.it.skip       = global.it
   global.it.only       = global.it
 
