@@ -1,6 +1,6 @@
 {
   "name": "mocha-list-tests",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "List mocha suites and tests without running anything",
   "main": "mocha-list-tests.js",
   "scripts": {
@@ -16,5 +16,8 @@
     "tests"
   ],
   "author": "Pau Sanchez",
-  "license": "MIT"
+  "license": "MIT",
+  "engines" : {
+    "node" : ">=7.6"
+  }
 }

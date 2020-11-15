@@ -81,7 +81,9 @@ let tests = {};
 let suites = {};
 let tree = {};
 let testRoute = [];
-const directoryPrefix = new RegExp(`^${process.cwd()}/`);
+const directoryPrefix = process.cwd() + path.sep;
+
+
 // -----------------------------------------------------------------------------
 // addTestRouteToTree
 //
@@ -89,12 +91,23 @@ const directoryPrefix = new RegExp(`^${process.cwd()}/`);
 // convenient sometimes.
 // -----------------------------------------------------------------------------
 function addTestRouteToTree (testRoute, name) {
-  const stackTrace = { name: 'Stacktrace' };
-  Error.captureStackTrace(stackTrace, addTestRouteToTree);
-  const frames = stackTrace.stack.split('\n');
-  const line = frames[2];
-  const matches = line.match(/^(?:.*\((.*):\d+\)|.* at (\/.*?):\d+)$/);
-  const filenameAndLine = (matches[1] || matches[2]).replace(directoryPrefix, '');
+  let fileNameAndLine = 'unknown:0';
+
+  try {
+    const stackTrace = { name: 'Stacktrace' };
+    Error.captureStackTrace(stackTrace, addTestRouteToTree);
+    const frames = stackTrace.stack.split('\n');
+    const line = frames[2].replace('file://', '');
+
+    //  at Object.<anonymous> (file:///home/whatever/github/mocha-list-tests/test/example.mjs:56:12)
+    //  at file:///home/whatever/github/mocha-list-tests/test/example.mjs:51:1
+    const matches = line.match(/^(?:.*\((.*):\d+\)|.*\s+at\s+(\/.*?):\d+)$/);
+    if (matches)
+      fileNameAndLine = (matches[1] || matches[2]).replace(directoryPrefix, '');
+  }
+  catch(e) {
+    // ignore unknown errors
+  }
 
   let newTestRoute = testRoute.slice(0); // clone
   newTestRoute.push (name);
@@ -107,7 +120,7 @@ function addTestRouteToTree (testRoute, name) {
     // to override a leaf with an object.
     if (!(current in root) || typeof(root[current]) == 'string') {
       if ((i + 1) == newTestRoute.length)
-        root[current] = filenameAndLine;
+        root[current] = fileNameAndLine;
       else
         root[current] = {};
     }
@@ -178,7 +191,7 @@ function captureHookFunctions (name) {
 //
 //   }
 // -----------------------------------------------------------------------------
-function findSuitesAndTests (testFolder, extensions) {
+async function findSuitesAndTests (testFolder, extensions) {
   if (typeof (extensions) === "string")
     extensions = [extensions];
 
@@ -200,12 +213,16 @@ function findSuitesAndTests (testFolder, extensions) {
 
   // capture all suites and direct tests
   for (let i = 0; i < allTestFiles.length; i++) {
-    const file = allTestFiles[i];
+    let file = allTestFiles[i];
 
-    if (path.isAbsolute (file))
-      require (file);
+    if (!path.isAbsolute (file))
+      file = './' + path.relative (__dirname, file);
+
+    // load ES6 modules with import and everything else with require
+    if (/\.mjs$/i.test(file))
+      await import(file);
     else
-      require ('./' + path.relative (__dirname, file));
+      require (file);
   }
 
   return {
@@ -220,7 +237,7 @@ function findSuitesAndTests (testFolder, extensions) {
 //
 // Find all files containing tests under given folder
 // -----------------------------------------------------------------------------
-function main () {
+async function main () {
   if (
     (process.argv.length <= 2)
     || ((process.argv[2] == '-h') || (process.argv[2] == '--help'))
@@ -233,7 +250,7 @@ function main () {
 
   const testFolder = process.argv[2] || 'test';
 
-  const result = findSuitesAndTests (testFolder, 'js');
+  const result = await findSuitesAndTests (testFolder, 'js');
   console.log (JSON.stringify (result, null, '  '));
 
   return 0;
@@ -243,14 +260,15 @@ function main () {
 // start script
 // -----------------------------------------------------------------------------
 if (require.main === module) {
-  try {
-    process.exit (main());
-  }
-  catch (e) {
+  main()
+  .then(function(result) {
+    process.exit (result);
+  })
+  .catch(function(e) {
     console.error ("Fatal Error (try --help for help):");
     console.error (e);
     process.exit (-1);
-  }
+  });
 }
 
 module.exports = {
