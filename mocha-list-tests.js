@@ -81,7 +81,7 @@ let tests = {};
 let suites = {};
 let tree = {};
 let testRoute = [];
-
+const directoryPrefix = new RegExp(`^${process.cwd()}/`);
 // -----------------------------------------------------------------------------
 // addTestRouteToTree
 //
@@ -89,6 +89,13 @@ let testRoute = [];
 // convenient sometimes.
 // -----------------------------------------------------------------------------
 function addTestRouteToTree (testRoute, name) {
+  const stackTrace = { name: 'Stacktrace' };
+  Error.captureStackTrace(stackTrace, addTestRouteToTree);
+  const frames = stackTrace.stack.split('\n');
+  const line = frames[2];
+  const matches = line.match(/^(?:.*\((.*):\d+\)|.* at (\/.*?):\d+)$/);
+  const filenameAndLine = (matches[1] || matches[2]).replace(directoryPrefix, '');
+
   let newTestRoute = testRoute.slice(0); // clone
   newTestRoute.push (name);
 
@@ -98,9 +105,9 @@ function addTestRouteToTree (testRoute, name) {
 
     // hack to initialize to empty object or true for leafs and be prepared
     // to override a leaf with an object.
-    if (!(current in root) || (root[current] === true)) {
+    if (!(current in root) || typeof(root[current]) == 'string') {
       if ((i + 1) == newTestRoute.length)
-        root[current] = true;
+        root[current] = filenameAndLine;
       else
         root[current] = {};
     }
@@ -123,7 +130,7 @@ function captureDescribeFunctions (suiteName, suite) {
 
   testRoute.push (suiteName);
   suites[testRoute.join ('.')] = true;
-  suite();
+  suite.apply({timeout: () => {}, slow: () => {}});
   testRoute.pop ();
 }
 
@@ -148,7 +155,6 @@ function captureItFunctions (testName, ignoreFunction) {
 // -----------------------------------------------------------------------------
 function captureHookFunctions (name) {
   return function capture (ignoreFunction) {
-    console.log (name, ignoreFunction);
     addTestRouteToTree (testRoute, ':' + name);
   };
 }
@@ -173,8 +179,12 @@ function findSuitesAndTests (testFolder, extensions) {
   let allTestFiles = lookupFiles (testFolder, extensions || ['js'], true);
 
   // HOOK: describe/it function hooks
-  global.describe = captureDescribeFunctions
-  global.it       = captureItFunctions
+  global.describe      = captureDescribeFunctions
+  global.describe.skip = global.describe
+  global.describe.only = global.describe
+  global.it            = captureItFunctions
+  global.it.skip       = global.it
+  global.it.only       = global.it
 
   global.before     = captureHookFunctions('before')
   global.after      = captureHookFunctions('after')
