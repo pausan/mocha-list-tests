@@ -28,6 +28,9 @@ function lookupFiles (filepath, extensions, recursive) {
     if (fs.existsSync(filepath + '.js')) {
       filepath += '.js';
     }
+    else if (fs.existsSync(filepath + '.mjs')) {
+      filepath += '.mjs';
+    }
     else {
       throw new Error("cannot resolve path (or pattern) '" + filepath + "'");
     }
@@ -195,7 +198,11 @@ async function findSuitesAndTests (testFolder, extensions) {
   if (typeof (extensions) === "string")
     extensions = [extensions];
 
-  let allTestFiles = lookupFiles (testFolder, extensions || ['js'], true);
+  let allTestFiles = lookupFiles (
+    testFolder,
+    extensions || ['js', 'mjs'],
+    true
+  );
 
   // HOOK: describe/it function hooks
   global.describe      = captureDescribeFunctions
@@ -250,7 +257,7 @@ async function main () {
 
   const testFolder = process.argv[2] || 'test';
 
-  const result = await findSuitesAndTests (testFolder, 'js');
+  const result = await findSuitesAndTests (testFolder, ['js', 'mjs']);
   console.log (JSON.stringify (result, null, '  '));
 
   return 0;
