@@ -244,7 +244,13 @@ async function main() {
   const testFolder = process.argv[2] || 'test'
 
   const result = await findSuitesAndTests(testFolder, ['js', 'mjs'])
-  console.log(JSON.stringify(result, null, '  '))
+
+  // write to stdout and wait for console output to be flushed
+  await new Promise((resolve, _) => {
+    process.stdout.write(JSON.stringify(result, null, 2), () => {
+      resolve()
+    })
+  })
 
   return 0
 }
