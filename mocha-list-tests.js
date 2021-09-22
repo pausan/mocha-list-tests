@@ -1,15 +1,15 @@
 // -----------------------------------------------------------------------------
-// list-mocha-tests
+// mocha-list-tests
 //
-// Copyright(c) 2018 Pau Sanchez
+// Copyright(c) 2018-2021 Pau Sanchez
 //
 // MIT Licensed
 // -----------------------------------------------------------------------------
 'use strict'
 
-const fs = require('fs');
-const path = require('path');
-const process = require ('process');
+const fs = require('fs')
+const path = require('path')
+const process = require('process')
 
 // -----------------------------------------------------------------------------
 // lookupFiles
@@ -21,56 +21,54 @@ const process = require ('process');
 // @param {boolean} recursive Whether or not to recurse into subdirectories.
 // @return {string[]} An array of paths.
 // -----------------------------------------------------------------------------
-function lookupFiles (filepath, extensions, recursive) {
-  var files = [];
+function lookupFiles(filepath, extensions, recursive) {
+  var files = []
 
   if (!fs.existsSync(filepath)) {
     if (fs.existsSync(filepath + '.js')) {
-      filepath += '.js';
-    }
-    else if (fs.existsSync(filepath + '.mjs')) {
-      filepath += '.mjs';
-    }
-    else {
-      throw new Error("cannot resolve path (or pattern) '" + filepath + "'");
+      filepath += '.js'
+    } else if (fs.existsSync(filepath + '.mjs')) {
+      filepath += '.mjs'
+    } else {
+      throw new Error("cannot resolve path (or pattern) '" + filepath + "'")
     }
   }
 
   try {
-    var stat = fs.statSync(filepath);
+    var stat = fs.statSync(filepath)
     if (stat.isFile()) {
-      return [filepath];
+      return [filepath]
     }
   } catch (err) {
     // ignore error
-    return [];
+    return []
   }
 
-  const childFiles = fs.readdirSync(filepath);
+  const childFiles = fs.readdirSync(filepath)
 
   for (let i = 0; i < childFiles.length; i++) {
-    const file = path.join(filepath, childFiles[i]);
+    const file = path.join(filepath, childFiles[i])
     try {
-      var stat = fs.statSync(file);
+      var stat = fs.statSync(file)
       if (stat.isDirectory()) {
         if (recursive) {
-          files = files.concat ( lookupFiles (file, extensions, recursive) );
+          files = files.concat(lookupFiles(file, extensions, recursive))
         }
-        continue;
+        continue
       }
     } catch (err) {
       // ignore error
-      continue;
+      continue
     }
-    var re = new RegExp('\\.(?:' + extensions.join('|') + ')$');
+    var re = new RegExp('\\.(?:' + extensions.join('|') + ')$')
     if (!stat.isFile() || !re.test(file) || path.basename(file)[0] === '.') {
-      continue;
+      continue
     }
-    files.push(file);
+    files.push(file)
   }
 
-  return files;
-};
+  return files
+}
 
 // -----------------------------------------------------------------------------
 // Some global variables. Yes, this is dirty, but given the simplicity of this
@@ -80,12 +78,11 @@ function lookupFiles (filepath, extensions, recursive) {
 // Objects are used to avoid key duplicates when programmatically declaring
 // suites/tests.
 // -----------------------------------------------------------------------------
-let tests = {};
-let suites = {};
-let tree = {};
-let testRoute = [];
-const directoryPrefix = process.cwd() + path.sep;
-
+let tests = {}
+let suites = {}
+let tree = {}
+let testRoute = []
+const directoryPrefix = process.cwd() + path.sep
 
 // -----------------------------------------------------------------------------
 // addTestRouteToTree
@@ -93,41 +90,38 @@ const directoryPrefix = process.cwd() + path.sep;
 // Helper function to capture test routes as a tree, which might be more
 // convenient sometimes.
 // -----------------------------------------------------------------------------
-function addTestRouteToTree (testRoute, name) {
-  let fileNameAndLine = 'unknown:0';
+function addTestRouteToTree(testRoute, name) {
+  let fileNameAndLine = 'unknown:0'
 
   try {
-    const stackTrace = { name: 'Stacktrace' };
-    Error.captureStackTrace(stackTrace, addTestRouteToTree);
-    const frames = stackTrace.stack.split('\n');
-    const line = frames[2].replace('file://', '');
+    const stackTrace = { name: 'Stacktrace' }
+    Error.captureStackTrace(stackTrace, addTestRouteToTree)
+    const frames = stackTrace.stack.split('\n')
+    const line = frames[2].replace('file://', '')
 
     //  at Object.<anonymous> (file:///home/whatever/github/mocha-list-tests/test/example.mjs:56:12)
     //  at file:///home/whatever/github/mocha-list-tests/test/example.mjs:51:1
-    const matches = line.match(/^(?:.*\((.*):\d+\)|.*\s+at\s+(\/.*?):\d+)$/);
+    const matches = line.match(/^(?:.*\((.*):\d+\)|.*\s+at\s+(\/.*?):\d+)$/)
     if (matches)
-      fileNameAndLine = (matches[1] || matches[2]).replace(directoryPrefix, '');
-  }
-  catch(e) {
+      fileNameAndLine = (matches[1] || matches[2]).replace(directoryPrefix, '')
+  } catch (e) {
     // ignore unknown errors
   }
 
-  let newTestRoute = testRoute.slice(0); // clone
-  newTestRoute.push (name);
+  let newTestRoute = testRoute.slice(0) // clone
+  newTestRoute.push(name)
 
-  let root = tree;
+  let root = tree
   for (let i = 0; i < newTestRoute.length; i++) {
-    const current = newTestRoute[i];
+    const current = newTestRoute[i]
 
     // hack to initialize to empty object or true for leafs and be prepared
     // to override a leaf with an object.
-    if (!(current in root) || typeof(root[current]) == 'string') {
-      if ((i + 1) == newTestRoute.length)
-        root[current] = fileNameAndLine;
-      else
-        root[current] = {};
+    if (!(current in root) || typeof root[current] == 'string') {
+      if (i + 1 == newTestRoute.length) root[current] = fileNameAndLine
+      else root[current] = {}
     }
-    root = root[current];
+    root = root[current]
   }
 }
 
@@ -141,19 +135,19 @@ function addTestRouteToTree (testRoute, name) {
 //       methods... and since we are not running 'it' methods, they can
 //       be safely be executed as normal methods.
 // -----------------------------------------------------------------------------
-function captureDescribeFunctions (suiteName, suite) {
-  addTestRouteToTree (testRoute, suiteName);
+function captureDescribeFunctions(suiteName, suite) {
+  addTestRouteToTree(testRoute, suiteName)
 
-  testRoute.push (suiteName);
-  suites[testRoute.join ('.')] = true;
+  testRoute.push(suiteName)
+  suites[testRoute.join('.')] = true
 
   // define methods that can be used inside describe using this
   suite.apply({
-    timeout : () => {},
-    slow : () => {},
-    retries: () => {}
-  });
-  testRoute.pop ();
+    timeout: () => {},
+    slow: () => {},
+    retries: () => {},
+  })
+  testRoute.pop()
 }
 
 // -----------------------------------------------------------------------------
@@ -162,10 +156,10 @@ function captureDescribeFunctions (suiteName, suite) {
 // Helper function to captures all 'it' calls and add them to our internal
 // list of tests
 // -----------------------------------------------------------------------------
-function captureItFunctions (testName, ignoreFunction) {
-  addTestRouteToTree (testRoute, testName);
+function captureItFunctions(testName, ignoreFunction) {
+  addTestRouteToTree(testRoute, testName)
 
-  tests[ (testRoute.join ('.') + '.' + testName).replace (/^\.|\.$/, '') ] = true;
+  tests[(testRoute.join('.') + '.' + testName).replace(/^\.|\.$/, '')] = true
 }
 
 // -----------------------------------------------------------------------------
@@ -175,10 +169,10 @@ function captureItFunctions (testName, ignoreFunction) {
 // our internal list of tests. Since these function's first parameter is a
 // function itself, we have to specify the name beforehand
 // -----------------------------------------------------------------------------
-function captureHookFunctions (name) {
-  return function capture (ignoreFunction) {
-    addTestRouteToTree (testRoute, ':' + name);
-  };
+function captureHookFunctions(name) {
+  return function capture(ignoreFunction) {
+    addTestRouteToTree(testRoute, ':' + name)
+  }
 }
 // -----------------------------------------------------------------------------
 // findSuitesAndTests
@@ -194,49 +188,41 @@ function captureHookFunctions (name) {
 //
 //   }
 // -----------------------------------------------------------------------------
-async function findSuitesAndTests (testFolder, extensions) {
-  if (typeof (extensions) === "string")
-    extensions = [extensions];
+async function findSuitesAndTests(testFolder, extensions) {
+  if (typeof extensions === 'string') extensions = [extensions]
 
-  let allTestFiles = lookupFiles (
-    testFolder,
-    extensions || ['js', 'mjs'],
-    true
-  );
+  let allTestFiles = lookupFiles(testFolder, extensions || ['js', 'mjs'], true)
 
   // HOOK: describe/it function hooks
-  global.describe      = captureDescribeFunctions
-  global.it            = captureItFunctions
+  global.describe = captureDescribeFunctions
+  global.it = captureItFunctions
 
   global.describe.skip = global.describe
   global.describe.only = global.describe
-  global.it.skip       = global.it
-  global.it.only       = global.it
+  global.it.skip = global.it
+  global.it.only = global.it
 
-  global.before     = captureHookFunctions('before')
-  global.after      = captureHookFunctions('after')
+  global.before = captureHookFunctions('before')
+  global.after = captureHookFunctions('after')
   global.beforeEach = captureHookFunctions('beforeEach')
-  global.afterEach  = captureHookFunctions('afterEach')
+  global.afterEach = captureHookFunctions('afterEach')
 
   // capture all suites and direct tests
   for (let i = 0; i < allTestFiles.length; i++) {
-    let file = allTestFiles[i];
+    let file = allTestFiles[i]
 
-    if (!path.isAbsolute (file))
-      file = './' + path.relative (__dirname, file);
+    if (!path.isAbsolute(file)) file = './' + path.relative(__dirname, file)
 
     // load ES6 modules with import and everything else with require
-    if (/\.mjs$/i.test(file))
-      await import(file);
-    else
-      require (file);
+    if (/\.mjs$/i.test(file)) await import(file)
+    else require(file)
   }
 
   return {
-    suites : Object.keys(suites),
-    tests : Object.keys(tests),
-    tree : tree
-  };
+    suites: Object.keys(suites),
+    tests: Object.keys(tests),
+    tree: tree,
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -244,23 +230,23 @@ async function findSuitesAndTests (testFolder, extensions) {
 //
 // Find all files containing tests under given folder
 // -----------------------------------------------------------------------------
-async function main () {
+async function main() {
   if (
-    (process.argv.length <= 2)
-    || ((process.argv[2] == '-h') || (process.argv[2] == '--help'))
-  )
-  {
-    console.log ("Use: list-mocha-tests.js <test-folder>\n")
-    console.log ("Copyright(c) 2018 Pau Sanchez - MIT Licensed")
-    return 0;
+    process.argv.length <= 2 ||
+    process.argv[2] == '-h' ||
+    process.argv[2] == '--help'
+  ) {
+    console.log('Use: list-mocha-tests.js <test-folder>\n')
+    console.log('Copyright(c) 2018 Pau Sanchez - MIT Licensed')
+    return 0
   }
 
-  const testFolder = process.argv[2] || 'test';
+  const testFolder = process.argv[2] || 'test'
 
-  const result = await findSuitesAndTests (testFolder, ['js', 'mjs']);
-  console.log (JSON.stringify (result, null, '  '));
+  const result = await findSuitesAndTests(testFolder, ['js', 'mjs'])
+  console.log(JSON.stringify(result, null, '  '))
 
-  return 0;
+  return 0
 }
 
 // -----------------------------------------------------------------------------
@@ -268,16 +254,16 @@ async function main () {
 // -----------------------------------------------------------------------------
 if (require.main === module) {
   main()
-  .then(function(result) {
-    process.exit (result);
-  })
-  .catch(function(e) {
-    console.error ("Fatal Error (try --help for help):");
-    console.error (e);
-    process.exit (-1);
-  });
+    .then(function (result) {
+      process.exit(result)
+    })
+    .catch(function (e) {
+      console.error('Fatal Error (try --help for help):')
+      console.error(e)
+      process.exit(-1)
+    })
 }
 
 module.exports = {
-  findSuitesAndTests
-};
+  findSuitesAndTests,
+}
