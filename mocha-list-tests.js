@@ -90,7 +90,7 @@ const directoryPrefix = process.cwd() + path.sep
 // Helper function to capture test routes as a tree, which might be more
 // convenient sometimes.
 // -----------------------------------------------------------------------------
-function addTestRouteToTree(testRoute, name) {
+function addTestRouteToTree(testRoute, testType, name) {
   let fileNameAndLine = 'unknown:0'
 
   try {
@@ -118,10 +118,16 @@ function addTestRouteToTree(testRoute, name) {
     // hack to initialize to empty object or true for leafs and be prepared
     // to override a leaf with an object.
     if (!(current in root) || typeof root[current] == 'string') {
-      if (i + 1 == newTestRoute.length) root[current] = fileNameAndLine
+      if (i + 1 == newTestRoute.length)
+        root[current] = {
+          type: testType,
+          file: fileNameAndLine.split(':')[0],
+          line: parseInt(fileNameAndLine.split(':')[1], 10),
+          children: {},
+        }
       else root[current] = {}
     }
-    root = root[current]
+    root = root[current].children
   }
 }
 
@@ -135,19 +141,21 @@ function addTestRouteToTree(testRoute, name) {
 //       methods... and since we are not running 'it' methods, they can
 //       be safely be executed as normal methods.
 // -----------------------------------------------------------------------------
-function captureDescribeFunctions(suiteName, suite) {
-  addTestRouteToTree(testRoute, suiteName)
+function captureDescribeFunctions(testType) {
+  return function captureDescribe(suiteName, suite) {
+    addTestRouteToTree(testRoute, testType, suiteName)
 
-  testRoute.push(suiteName)
-  suites[testRoute.join('.')] = true
+    testRoute.push(suiteName)
+    suites[testRoute.join('.')] = true
 
-  // define methods that can be used inside describe using this
-  suite.apply({
-    timeout: () => {},
-    slow: () => {},
-    retries: () => {},
-  })
-  testRoute.pop()
+    // define methods that can be used inside describe using this
+    suite.apply({
+      timeout: () => {},
+      slow: () => {},
+      retries: () => {},
+    })
+    testRoute.pop()
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -156,10 +164,12 @@ function captureDescribeFunctions(suiteName, suite) {
 // Helper function to captures all 'it' calls and add them to our internal
 // list of tests
 // -----------------------------------------------------------------------------
-function captureItFunctions(testName, ignoreFunction) {
-  addTestRouteToTree(testRoute, testName)
+function captureItFunctions(testType) {
+  return function captureIt(testName, ignoreFunction) {
+    addTestRouteToTree(testRoute, testType, testName)
 
-  tests[(testRoute.join('.') + '.' + testName).replace(/^\.|\.$/, '')] = true
+    tests[(testRoute.join('.') + '.' + testName).replace(/^\.|\.$/, '')] = true
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -171,9 +181,55 @@ function captureItFunctions(testName, ignoreFunction) {
 // -----------------------------------------------------------------------------
 function captureHookFunctions(name) {
   return function capture(ignoreFunction) {
-    addTestRouteToTree(testRoute, ':' + name)
+    addTestRouteToTree(testRoute, name, ':' + name)
   }
 }
+
+// -----------------------------------------------------------------------------
+// cleanEmptyChildren
+//
+// Removes all nodes whose children are empty
+// -----------------------------------------------------------------------------
+function cleanEmptyChildren(extendedTree) {
+  for (const [key, subtree] of Object.entries(extendedTree)) {
+    if (typeof subtree !== 'object') continue
+
+    if (
+      subtree.hasOwnProperty('children') &&
+      Object.keys(subtree.children).length === 0
+    ) {
+      delete subtree.children
+    } else {
+      cleanEmptyChildren(subtree)
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// buildSimpleTree
+//
+// Creates a simple tree where leaf nodes contain the file:line of the test
+// -----------------------------------------------------------------------------
+function buildSimpleTree(extendedTree) {
+  if (
+    !extendedTree.hasOwnProperty('children') &&
+    extendedTree.hasOwnProperty('line')
+  ) {
+    return `${extendedTree.file}:${extendedTree.line}`
+  }
+
+  const simpleTree = {}
+  for (const [key, subtree] of Object.entries(extendedTree)) {
+    if (subtree.hasOwnProperty('children')) {
+      simpleTree[key] = buildSimpleTree(subtree.children)
+    } else {
+      simpleTree[key] = `${subtree.file}:${subtree.line}`
+    }
+  }
+
+  return simpleTree
+}
+
 // -----------------------------------------------------------------------------
 // findSuitesAndTests
 //
@@ -185,7 +241,36 @@ function captureHookFunctions(name) {
 // Example:
 //   >>> findSuitesAndTests ('my-test-dir', 'js')
 //   {
+//      "suites" : [
+//        "suite-1",
+//        "suite-2",
+//        "suite-2.suite-2.1",
+//        ...
+//      ],
 //
+//      "tests": [
+//        "test-0",
+//        "suite-1.test-1",
+//        "suite-2.suite-2.1.test-2.1.1",
+//        ...
+//      ],
+//      "tree": {
+//        "test-0": {
+//          "type": "it.skip",
+//          "file": "testFile.js",
+//          "line": 14
+//        },
+//        "suite-1": {
+//          "type": "describe",
+//          "file": "testFile.js",
+//          "line": 23,
+//          "test-1": {
+//            "type": "it",
+//            "file": "testFile.js",
+//            "line": 27
+//          }
+//        },
+//      }
 //   }
 // -----------------------------------------------------------------------------
 async function findSuitesAndTests(testFolder, extensions) {
@@ -194,13 +279,13 @@ async function findSuitesAndTests(testFolder, extensions) {
   let allTestFiles = lookupFiles(testFolder, extensions || ['js', 'mjs'], true)
 
   // HOOK: describe/it function hooks
-  global.describe = captureDescribeFunctions
-  global.it = captureItFunctions
+  global.describe = captureDescribeFunctions('describe')
+  global.it = captureItFunctions('it')
 
-  global.describe.skip = global.describe
-  global.describe.only = global.describe
-  global.it.skip = global.it
-  global.it.only = global.it
+  global.describe.skip = captureDescribeFunctions('describe.skip')
+  global.describe.only = captureDescribeFunctions('describe.only')
+  global.it.skip = captureItFunctions('it.skip')
+  global.it.only = captureItFunctions('it.only')
 
   global.before = captureHookFunctions('before')
   global.after = captureHookFunctions('after')
@@ -218,10 +303,16 @@ async function findSuitesAndTests(testFolder, extensions) {
     else require(file)
   }
 
+  cleanEmptyChildren(tree)
+
+  // build a simple tree out of the current extended tree
+  const simpleTree = buildSimpleTree(tree)
+
   return {
     suites: Object.keys(suites),
     tests: Object.keys(tests),
-    tree: tree,
+    tree: simpleTree,
+    extended_tree: tree,
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "mocha-list-tests",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "description": "List mocha suites and tests without running anything",
   "main": "mocha-list-tests.js",
   "scripts": {

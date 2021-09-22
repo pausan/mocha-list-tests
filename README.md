@@ -25,6 +25,7 @@ let result = mochaListTests.findSuitesAndTests ('./test-folder/')
 console.log (result.suites)
 console.log (result.tests)
 console.log (result.tree)
+console.log (result.extended_tree)
 ```
 
 ### Command-line interface (shell)
@@ -33,6 +34,82 @@ To get a list of all suites and tests, just run:
 
 ```sh
   node ./node_modules/mocha-list-tests/mocha-list-tests.js your-test-dir/
+```
+
+Output will be a valid json, although there is some data in this example that
+has been removed for simplification purposes:
+
+```json
+{
+  "suites": [
+    "suite-1",
+    "suite-2",
+    "suite-2.suite-2.1",
+    "suite-3",
+    ...
+  ],
+
+  "tests": [
+    "test-0",
+    "suite-1.test-1",
+    "suite-2.suite-2.1.test-2.1.1",
+    "suite-3.test-3.1",
+    ...
+  ],
+
+  "tree": {
+    "test-0": "test/example.js:3",
+    "suite-1": {
+      "test-1": "test/example.js:8"
+    },
+    "suite-2": {
+      "suite-2.1": {
+        "test-2.1.1": "test/example.js:15"
+      }
+    },
+    ...
+  },
+
+  "extended_tree": {
+    "test-0": {
+      "type": "it",
+      "file": "test/example.js",
+      "line": 3
+    },
+    "suite-1": {
+      "type": "describe",
+      "file": "test/example.js",
+      "line": 7,
+      "children": {
+        "test-1": {
+          "type": "it",
+          "file": "test/example.js",
+          "line": 8
+        }
+      }
+    },
+    "suite-2": {
+      "type": "describe",
+      "file": "test/example.js",
+      "line": 13,
+      "children": {
+        "suite-2.1": {
+          "type": "describe",
+          "file": "test/example.js",
+          "line": 14,
+          "children": {
+            "test-2.1.1": {
+              "type": "it",
+              "file": "test/example.js",
+              "line": 15
+            }
+          }
+        }
+      }
+    },
+    ...
+  }
+}
 ```
 
 ## License

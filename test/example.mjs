@@ -1,7 +1,7 @@
 import './es6module.mjs'
 import { name } from '../test/es6module.mjs'
 
-it ('test-0', async function () {
+it ('mtest-0', async function () {
   console.log ("won't execute");
 })
 
